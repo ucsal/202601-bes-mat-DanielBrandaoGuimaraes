@@ -1,8 +1,13 @@
 package br.com.ucsal.olimpiadas;
 
-import br.com.ucsal.olimpiadas.repository.memory.*;
-import br.com.ucsal.olimpiadas.service.*;
-import br.com.ucsal.olimpiadas.ui.ChessBoardRenderer;
+import br.com.ucsal.olimpiadas.repository.ParticipanteRepository;
+import br.com.ucsal.olimpiadas.repository.ProvaRepository;
+import br.com.ucsal.olimpiadas.repository.QuestaoRepository;
+import br.com.ucsal.olimpiadas.repository.TentativaRepository;
+import br.com.ucsal.olimpiadas.service.ParticipanteService;
+import br.com.ucsal.olimpiadas.service.ProvaService;
+import br.com.ucsal.olimpiadas.service.QuestaoService;
+import br.com.ucsal.olimpiadas.service.TentativaService;
 import br.com.ucsal.olimpiadas.ui.ConsoleMenu;
 
 import java.util.Scanner;
@@ -10,27 +15,40 @@ import java.util.Scanner;
 public class App {
 
     public static void main(String[] args) {
-        var participanteRepo = new InMemoryParticipanteRepository();
-        var provaRepo        = new InMemoryProvaRepository();
-        var questaoRepo      = new InMemoryQuestaoRepository();
-        var tentativaRepo    = new InMemoryTentativaRepository();
+        ParticipanteRepository participanteRepository = new ParticipanteRepository();
+        ProvaRepository provaRepository = new ProvaRepository();
+        QuestaoRepository questaoRepository = new QuestaoRepository();
+        TentativaRepository tentativaRepository = new TentativaRepository();
 
-        var participanteService = new ParticipanteService(participanteRepo);
-        var provaService        = new ProvaService(provaRepo);
-        var questaoService      = new QuestaoService(questaoRepo, provaRepo);
-        var tentativaService    = new TentativaService(tentativaRepo, questaoRepo);
+        ParticipanteService participanteService = new ParticipanteService(participanteRepository);
+        ProvaService provaService = new ProvaService(provaRepository);
+        QuestaoService questaoService = new QuestaoService(questaoRepository, provaRepository);
+        TentativaService tentativaService = new TentativaService(tentativaRepository);
 
-        new DataSeeder(provaService, questaoService).executar();
+        seed(provaService, questaoService);
 
-        var menu = new ConsoleMenu(
+        ConsoleMenu menu = new ConsoleMenu(
                 participanteService,
                 provaService,
                 questaoService,
                 tentativaService,
-                new ChessBoardRenderer(System.out),
                 new Scanner(System.in)
         );
 
         menu.iniciar();
+    }
+
+    private static void seed(ProvaService provaService, QuestaoService questaoService) {
+        provaService.cadastrar("Olimpíada 2026 • Nível 1 • Prova A");
+
+        long provaId = provaService.listarTodos().get(0).getId();
+
+        String enunciado = "Questão 1 — Mate em 1.\n"
+                + "É a vez das brancas.\n"
+                + "Encontre o lance que dá mate imediatamente.";
+
+        String[] alternativas = new String[] { "A) Qh7#", "B) Qf5#", "C) Qc8#", "D) Qh8#", "E) Qe6#" };
+
+        questaoService.cadastrar(provaId, enunciado, alternativas, 'C', "6k1/5ppp/8/8/8/7Q/6PP/6K1 w - - 0 1");
     }
 }

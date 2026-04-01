@@ -2,16 +2,17 @@
 
 ## O que foi feito
 
-O código original estava todo concentrado na classe `App.java`, misturando lógica de negócio, acesso a dados e interface com o usuário no mesmo lugar. A refatoração separou essas responsabilidades em camadas distintas, sem alterar nenhum comportamento funcional do sistema.
+O código original estava todo concentrado na classe `App.java`, que acumulava várias responsabilidades ao mesmo tempo: ler a entrada do usuário, guardar os dados em listas estáticas, aplicar as regras de negócio e renderizar o tabuleiro de xadrez. Qualquer alteração pequena exigia mexer em muita coisa ao mesmo tempo.
+
+O objetivo da refatoração foi separar essas responsabilidades em camadas distintas, sem alterar o comportamento do sistema. O menu continua igual, as mensagens continuam iguais, a lógica continua a mesma — só a organização do código mudou.
 
 ---
 
-## Estrutura de pastas após a refatoração
+## Estrutura de pastas
 
 ```
 src/main/java/br/com/ucsal/olimpiadas/
 ├── App.java
-├── DataSeeder.java
 ├── model/
 │   ├── Participante.java
 │   ├── Prova.java
@@ -22,94 +23,72 @@ src/main/java/br/com/ucsal/olimpiadas/
 │   ├── ParticipanteRepository.java
 │   ├── ProvaRepository.java
 │   ├── QuestaoRepository.java
-│   ├── TentativaRepository.java
-│   └── memory/
-│       ├── InMemoryParticipanteRepository.java
-│       ├── InMemoryProvaRepository.java
-│       ├── InMemoryQuestaoRepository.java
-│       └── InMemoryTentativaRepository.java
+│   └── TentativaRepository.java
 ├── service/
 │   ├── ParticipanteService.java
 │   ├── ProvaService.java
 │   ├── QuestaoService.java
 │   └── TentativaService.java
 └── ui/
-    ├── ConsoleMenu.java
-    └── ChessBoardRenderer.java
+    └── ConsoleMenu.java
 
 src/test/java/br/com/ucsal/olimpiadas/service/
-├── ParticipanteServiceTest.java
-├── ProvaServiceTest.java
-├── QuestaoServiceTest.java
-└── TentativaServiceTest.java
+└── ServiceTest.java
 ```
 
 ---
 
-## Onde cada princípio SOLID foi aplicado
+## Onde cada princípio foi aplicado
 
 ### S — Single Responsibility Principle (SRP)
-**Problema original:** a classe `App` tinha múltiplas responsabilidades: ler entradas do usuário, aplicar regras de negócio, armazenar dados e renderizar o tabuleiro de xadrez.
 
-**O que foi feito:**
-- `ConsoleMenu` ficou responsável apenas pela interação com o usuário via console
-- `ParticipanteService`, `ProvaService`, `QuestaoService` e `TentativaService` ficaram responsáveis cada um pelas regras de negócio da sua entidade
-- `InMemory*Repository` ficaram responsáveis apenas pelo armazenamento dos dados
-- `ChessBoardRenderer` ficou responsável apenas por renderizar o tabuleiro FEN no console
-- `DataSeeder` ficou responsável apenas por popular os dados iniciais do sistema
+Antes, a `App` fazia tudo. Após a refatoração, cada classe passou a ter apenas uma responsabilidade:
+
+- `ConsoleMenu` cuida somente da interação com o usuário
+- Os quatro serviços (`ParticipanteService`, `ProvaService`, etc.) cuidam cada um das regras de negócio da sua entidade
+- Os quatro repositórios cuidam somente de armazenar e buscar dados
+- As classes de `model` apenas representam as entidades do sistema
 
 ---
 
 ### O — Open/Closed Principle (OCP)
-**Problema original:** toda a lógica de persistência estava embutida na `App` com listas estáticas. Qualquer mudança no mecanismo de armazenamento exigiria alterar a classe principal.
 
-**O que foi feito:**
-- As interfaces `ParticipanteRepository`, `ProvaRepository`, `QuestaoRepository` e `TentativaRepository` definem contratos fixos
-- As implementações `InMemory*` são as versões atuais desses contratos
-- Para trocar para banco de dados no futuro, basta criar novas implementações como `JpaParticipanteRepository` sem alterar nenhum serviço
+Antes, os dados ficavam em listas estáticas dentro da `App`. Para trocar para um banco de dados, seria necessário reescrever grande parte da classe principal.
+
+Agora os repositórios ficam separados. Se for necessário trocar a forma de armazenar os dados, basta alterar os repositórios — os serviços e o menu não precisam ser modificados.
 
 ---
 
 ### L — Liskov Substitution Principle (LSP)
-**Problema original:** não havia hierarquia de tipos, então o princípio não era violado, mas também não era aproveitado.
 
-**O que foi feito:**
-- As classes `InMemory*Repository` implementam fielmente os contratos das interfaces
-- Os serviços funcionam corretamente com qualquer implementação dessas interfaces, bastando passá-la no construtor
-- Por exemplo, `TentativaService` recebe um `TentativaRepository` e funciona da mesma forma independente de qual implementação for passada
+As classes de modelo são independentes e bem definidas. A classe `Questao`, por exemplo, encapsula a lógica de verificar se uma resposta está correta, e esse comportamento funciona de forma consistente independentemente de como o objeto foi criado.
 
 ---
 
 ### I — Interface Segregation Principle (ISP)
-**Problema original:** não havia interfaces, então os consumidores dependiam de uma classe monolítica que fazia tudo.
 
-**O que foi feito:**
-- Cada interface de repositório expõe apenas os métodos necessários para o seu contexto
-- `QuestaoRepository` tem apenas `salvar` e `buscarPorProvaId`, sem expor um `listarTodos` genérico que não seria usado
-- `TentativaRepository` tem apenas `salvar` e `listarTodos`, sem métodos de busca que não fazem sentido para esse contexto
+Cada repositório expõe apenas os métodos que fazem sentido para o seu contexto. O `QuestaoRepository`, por exemplo, possui apenas `salvar` e `buscarPorProvaId`, sem métodos genéricos que não seriam utilizados.
 
 ---
 
 ### D — Dependency Inversion Principle (DIP)
-**Problema original:** a `App` criava e usava diretamente as listas estáticas, ou seja, dependia de detalhes concretos de armazenamento.
 
-**O que foi feito:**
-- Os serviços recebem os repositórios via construtor, dependendo das interfaces e não das implementações concretas
-- O `ConsoleMenu` recebe todos os serviços via construtor
-- Apenas o `App.java` conhece as implementações concretas, funcionando como o ponto de composição do sistema (Composition Root)
+No código original, a `App` criava e controlava tudo diretamente, ficando acoplada aos detalhes de implementação.
 
-**Exemplo:**
+Após a refatoração, cada classe recebe o que precisa pelo construtor. O `ProvaService` não cria o repositório, ele recebe um já pronto. O `ConsoleMenu` não cria os serviços, recebe todos pelo construtor. Apenas o `App.java` é responsável por instanciar as dependências e injetá-las em quem precisa.
+
 ```java
-// App.java — único lugar que conhece as implementações concretas
-var participanteRepo = new InMemoryParticipanteRepository();
-var participanteService = new ParticipanteService(participanteRepo);
+// App.java instancia e injeta as dependências
+ProvaRepository provaRepository = new ProvaRepository();
+ProvaService provaService = new ProvaService(provaRepository);
 ```
-```java
-// ParticipanteService — depende apenas da interface
-public class ParticipanteService {
-    private final ParticipanteRepository repository;
 
-    public ParticipanteService(ParticipanteRepository repository) {
+```java
+// ProvaService recebe o repositório pelo construtor, não cria ele mesmo
+public class ProvaService {
+    private ProvaRepository repository;
+
+    public ProvaService(ProvaRepository repository) {
         this.repository = repository;
     }
 }
@@ -119,12 +98,7 @@ public class ParticipanteService {
 
 ## Como executar
 
-Sem frameworks externos. Basta compilar e rodar a classe `App.java` com Java 17 ou superior.
-
-```bash
-javac -r src/main/java src/main/java/br/com/ucsal/olimpiadas/App.java
-java -cp src/main/java br.com.ucsal.olimpiadas.App
-```
+Sem frameworks externos. Basta compilar e executar a classe `App.java` com Java 17 ou superior.
 
 ## Como rodar os testes
 

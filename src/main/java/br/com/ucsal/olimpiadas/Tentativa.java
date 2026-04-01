@@ -8,7 +8,7 @@ public class Tentativa {
     private long id;
     private long participanteId;
     private long provaId;
-    private final List<Resposta> respostas = new ArrayList<>();
+    private List<Resposta> respostas = new ArrayList<>();
 
     public long getId() { return id; }
     public void setId(long id) { this.id = id; }

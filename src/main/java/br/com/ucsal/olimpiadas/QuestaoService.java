@@ -8,8 +8,8 @@ import java.util.List;
 
 public class QuestaoService {
 
-    private final QuestaoRepository questaoRepository;
-    private final ProvaRepository provaRepository;
+    private QuestaoRepository questaoRepository;
+    private ProvaRepository provaRepository;
 
     public QuestaoService(QuestaoRepository questaoRepository, ProvaRepository provaRepository) {
         this.questaoRepository = questaoRepository;
@@ -17,15 +17,16 @@ public class QuestaoService {
     }
 
     public Questao cadastrar(long provaId, String enunciado, String[] alternativas, char correta, String fenInicial) {
-        provaRepository.buscarPorId(provaId)
-                .orElseThrow(() -> new IllegalArgumentException("Prova não encontrada: " + provaId));
-
-        if (enunciado == null || enunciado.isBlank())
+        if (provaRepository.buscarPorId(provaId) == null) {
+            throw new IllegalArgumentException("Prova não encontrada.");
+        }
+        if (enunciado == null || enunciado.isBlank()) {
             throw new IllegalArgumentException("Enunciado não pode ser vazio.");
+        }
 
-        var q = new Questao();
+        Questao q = new Questao();
         q.setProvaId(provaId);
-        q.setEnunciado(enunciado.trim());
+        q.setEnunciado(enunciado);
         q.setAlternativas(alternativas);
         q.setAlternativaCorreta(correta);
         q.setFenInicial(fenInicial);
